@@ -1,10 +1,24 @@
-1.10.3-Linux$ pip install darkdetect
-Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: darkdetect in /home/rinta/.local/lib/python3.10/site-packages (0.8.0)
-rinta@rinta-HP-LapTop:~/ドキュメント/GitHub/ets2-mod-jp/build/Paint-Job-Packer-v
-1.10.3-Linux$ ./abc
-Darkdetect is not installed (pip install darkdetect), defaulting to light mode
-Paint Job Packer can't find its library files
-Make sure that the "library" folder is in the same directory as packer.py, and it contains all of its files
-Press enter to quit
-
+MODの生成中にエラーが発生しました:
+width must be an integer, not ['sunshield.paint_xf, 'sunshield.paint_xg', 'sunshield.paint_xgp']
+Traceback:
+Traceback (most recent call last):
+File
+"/home/rinta/ドキュメント/GitHub/ets2-mod-j p/packer.py", line 1968, in generate_mod_from_wizard
+create_dds_from_source(image_path, acc_dds_path, (acc_size, acc_size))
+File
+"/home/rinta/ドキュメント/GitHub/ets2-mod-j p/packer.py", line 1943, in create_dds_from_source img.resize(size[0], size[1])
+File
+"/home/rinta/.local/lib/python3.10/site-pac kages/wand/image.py", line 1112, in wrapped
+result = function(self, *args, **kwargs)
+File
+"/home/rinta/.local/lib/python3.10/site-pac kages/wand/image.py", line 1121, in wrapped
+result = function(self, *args, **kwargs)
+File
+"/home/rinta/.local/lib/python3.10/site-pac kages/wand/image.py", line 7580, in resize assertions.assert_counting_number(width= width, height=height)
+File
+"/home/rinta/.local/lib/python3.10/site-pac kages/wand/assertions.py", line 56, in assert_counting_number
+assert_integer(**kwargs)
+File
+"/home/rinta/.local/lib/python3.10/site-pac kages/wand/assertions.py", line 75, in
+assert_integer raise TypeError(msg)
+TypeError: width must be an integer, not ['sunshield.paint_xf, 'sunshield.paint_xg', 'sunshield.paint_xgp']

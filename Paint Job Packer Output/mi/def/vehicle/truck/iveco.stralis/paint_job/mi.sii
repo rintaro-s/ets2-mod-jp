@@ -1,0 +1,8 @@
+SiiNunit
+{
+accessory_paint_job_data: mi.iveco.stralis.paint_job
+{
+@include "mi_settings.sui"
+	paint_job_mask: "/vehicle/truck/upgrade/paintjob/mi/Iveco Stralis/Iveco Stralis.tobj"
+}
+}

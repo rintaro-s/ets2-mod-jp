@@ -1,0 +1,5 @@
+material: "ui"
+{
+	texture: "mi Icon.tobj"
+	texture_name: "texture"
+}

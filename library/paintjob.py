@@ -9,6 +9,8 @@ class Vehicle:
         veh_ini = configparser.ConfigParser(allow_no_value = True)
         veh_ini.read("library/vehicles/{}/{}".format(game, file_name), encoding="utf-8")
         self.path = veh_ini["vehicle info"]["vehicle path"]
+        self.template_size = veh_ini["vehicle info"].getint("template size", 4096)
+        self.template_size = veh_ini["vehicle info"].getint("template size")
         self.alt_uvset = veh_ini["vehicle info"].getboolean("alt uvset")
         self.display_name = veh_ini["vehicle info"]["name"]
         self.name = strip_diacritics(self.display_name)

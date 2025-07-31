@@ -1873,56 +1873,118 @@ class PackerApp:
 
     def generate_mod_from_wizard(self):
         l = self.get_localised_string
-        save_directory = filedialog.askdirectory(title = l("{SaveDialogueTitle}"), initialdir = self.panel_directory_current_variable.get())
-        if not save_directory:
-            return
-
-        mod_name = self.ws1_mod_name_var.get()
-        author_name = self.ws1_author_name_var.get()
-        image_path = self.ws3_image_path_var.get()
-
-        if not image_path:
-            messagebox.showerror("エラー", "画像が選択されていません。")
-            return
-
-        output_path = f"{save_directory}/{mod_name}"
-        os.makedirs(output_path, exist_ok=True)
+        output_path = None  # Initialize to None
 
         try:
-            from wand.image import Image as WandImage
-            with WandImage(filename=image_path) as img:
-                img.resize(2048, 2048)
-                img.options['dds:compression'] = 'dxt5'
-                img.options['dds:mipmaps'] = '7' # Generate mipmaps
-                dds_path = f"{output_path}/color.dds"
-                img.save(filename=dds_path)
+            # Step 1: Verify inputs
+            mod_name = self.ws1_mod_name_var.get()
+            author_name = self.ws1_author_name_var.get()
+            selected_vehicle_str = self.ws2_vehicle_var.get()
+            image_path = self.ws3_image_path_var.get()
+
+            if not all([mod_name, author_name, selected_vehicle_str, image_path]):
+                messagebox.showerror(l("{ErrorSingle}").format(error_name="入力エラー"), "すべてのフィールドを入力し、画像を選択してください。")
+                return
+
+            # Step 2: Ask for save directory
+            save_directory = filedialog.askdirectory(title=l("{SaveDialogueTitle}"), initialdir=self.panel_directory_current_variable.get())
+            if not save_directory:
+                return
+
+            # Step 3: Find the selected vehicle object
+            selected_veh_obj = None
+            for veh in self.truck_list + self.truck_mod_list + self.bus_mod_list + self.trailer_list + self.trailer_mod_list:
+                if f"{veh.display_name} [{veh.display_author}]" == selected_vehicle_str:
+                    selected_veh_obj = pj.Vehicle(veh.file_name, self.tab_game_variable.get())
+                    break
+            
+            if not selected_veh_obj:
+                messagebox.showerror("エラー", "選択された車両が見つかりませんでした。")
+                return
+
+            # Step 4: Set up variables for paint job generation
+            game = self.tab_game_variable.get()
+            output_path = f"{save_directory}/Paint Job Packer Output"
+            out_path = f"{output_path}/{mod_name}"
+
+            mod_version = "1.0"
+            ingame_name = re.sub(r'[^a-zA-Z0-9_]', '', mod_name.lower().replace(" ", "_"))
+            internal_name = ingame_name[:12]
+            ingame_price = "1"
+            unlock_level = "0"
+            
+            if os.path.exists(out_path):
+                if messagebox.askyesno("確認", f"フォルダ '{out_path}' は既に存在します。上書きしますか？"):
+                    shutil.rmtree(out_path)
+                else:
+                    return
+            os.makedirs(out_path)
+
+            # Step 5: Generate basic mod files
+            pj.make_manifest_sii(out_path, mod_version, mod_name, author_name, False)
+            pj.copy_mod_manager_image(out_path)
+            pj.make_description(out_path, [selected_veh_obj] if not selected_veh_obj.trailer else [], [], [], [selected_veh_obj] if selected_veh_obj.trailer else [], [], "single")
+            pj.make_material_folder(out_path)
+            pj.copy_paintjob_icon(out_path, ingame_name)
+            pj.make_paintjob_icon_tobj(out_path, ingame_name)
+            pj.make_paintjob_icon_mat(out_path, internal_name, ingame_name)
+
+            # Step 6: Generate vehicle-specific files
+            veh = selected_veh_obj
+            pj.make_def_folder(out_path, veh)
+            pj.make_settings_sui(out_path, veh, internal_name, ingame_name, ingame_price, unlock_level)
+            pj.make_vehicle_folder(out_path, veh, ingame_name)
+
+            # Step 7: Process and copy the image as DDS
+            try:
+                from wand.image import Image as WandImage
+            except ImportError:
+                messagebox.showerror("エラー", "画像処理ライブラリ 'Wand' が見つかりません。\n'pip install Wand' を実行してインストールしてください。")
+                if os.path.exists(out_path): shutil.rmtree(out_path)
+                return
+
+            def create_dds_from_source(source_path, dest_path, size=(2048, 2048)):
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                with WandImage(filename=source_path) as img:
+                    img.resize(size[0], size[1])
+                    img.options['dds:compression'] = 'dxt5'
+                    img.options['dds:mipmaps'] = '7'
+                    img.save(filename=dest_path)
+
+            one_paintjob = True
+            paintjob_name = internal_name
+            main_dds_name = veh.name
+            if veh.uses_accessories:
+                 main_dds_name = "Cabin" if veh.type == "truck" else "Base Colour"
+
+            pj.make_def_sii(out_path, veh, paintjob_name, internal_name, one_paintjob, ingame_name, main_dds_name)
+            
+            vehicle_folder_path = f"vehicle/{veh.type}/upgrade/paintjob/{ingame_name}/{veh.name}"
+            if veh.mod:
+                vehicle_folder_path = f"vehicle/{veh.type}/upgrade/paintjob/{ingame_name}/{veh.name} [{veh.mod_author}]"
+
+            main_dds_path = f"{out_path}/{vehicle_folder_path}/{main_dds_name}.dds"
+            create_dds_from_source(image_path, main_dds_path, (veh.template_size, veh.template_size))
+            pj.make_main_tobj(out_path, veh, ingame_name, main_dds_name)
+
+            if veh.uses_accessories:
+                pj.make_accessory_sii(out_path, veh, ingame_name, paintjob_name)
+                for acc_name in veh.acc_dict:
+                    acc_size = 1024 # Default size for accessories
+                    acc_dds_path = f"{out_path}/{vehicle_folder_path}/{acc_name}.dds"
+                    create_dds_from_source(image_path, acc_dds_path, (acc_size, acc_size))
+                pj.make_accessory_tobj(out_path, veh, ingame_name)
+
+
+            # Step 8: Finalize
+            self.make_readme_file(output_path, ingame_name, game, mod_name, [veh] if not veh.trailer else [], [], [veh] if veh.trailer else [])
+            messagebox.showinfo(l("{ProgressCompleteTitle}"), l("{ProgressComplete1}\n\n{ProgressComplete2}\n\n{ProgressComplete3}").format(folder_name="Paint Job Packer Output"))
+
         except Exception as e:
-            messagebox.showerror("エラー", f"DDSファイルの生成中にエラーが発生しました: {e}")
-            return
-
-        manifest_content = f'''SiiNunit
-{{
-mod_package: .package_name
-{{
-    package_version: "1.0"
-    display_name: "{mod_name}"
-    author: "{author_name}"
-
-    # Categories, icon etc. would go here
-}}
-}}'''
-        with open(f"{output_path}/manifest.sii", "w") as f:
-            f.write(manifest_content)
-
-        instructions = f"""MOD '{mod_name}' が {output_path} に正常に生成されました。
-
-'MODのインストール方法:
-   - '{mod_name}' フォルダを、ゲームのMODフォルダに移動します:
-     - ETS2: /home/ユーザー名/.local/share/Euro Truck Simulator 2/mod/
-     - ATS: /home/ユーザー名/.local/share/American Truck Simulator/mod/
-
-ゲーム内でMODを有効化し、ペイントショップでご確認ください。"""
-        messagebox.showinfo("MOD生成完了", instructions)
+            messagebox.showerror("生成エラー", f"MODの生成中にエラーが発生しました:\n{e}\n\nTraceback:\n{traceback.format_exc()}")
+            # Clean up failed attempt
+            if out_path and os.path.exists(out_path):
+                shutil.rmtree(out_path)
 
     def select_image_for_wizard(self):
         file_path = filedialog.askopenfilename(title="画像を選択", filetypes=[("画像ファイル", "*.png;*.jpg;*.jpeg;*.bmp")])

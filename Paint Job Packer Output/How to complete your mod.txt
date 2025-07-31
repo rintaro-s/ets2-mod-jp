@@ -1,0 +1,44 @@
+Your mod has been generated and placed inside the "mi" folder.
+There are a few steps left to finish it off. You'll need to replace the files listed in this document.
+
+
+
+To test your mod as you make it, move the "mi" folder to your game's mod folder:
+/home/(username)/.local/share/Euro Truck Simulator 2/mod
+
+
+
+== Mod manager image ==
+Mod_Manager_Image.jpg
+
+A 276 x 162 JPEG image that represents your mod in the in-game mod manager.
+
+
+
+== Mod manager description ==
+Mod_Manager_Description.txt
+
+Your mod's description in the mod manager.
+It can be replaced, or you can modify the one that's already there.
+
+
+
+== In-game paint job icon ==
+material/ui/accessory/mi Icon.dds
+
+A 256 x 64 DDS image that is shown in-game when you buy your paint job.
+Stick to the shape in the placeholder for your icon to match the others in-game.
+
+
+
+== Vehicle textures ==
+All of the .dds files in:
+vehicle/truck/upgrade/paintjob/mi/Iveco Stralis/
+
+These are the main files of your mod, determining what your paint job will actually look like.
+Replace or re-colour every DDS image in this folder.
+
+Save each DDS in DXT5 format with mipmaps, if possible.
+Ensure every file's height and width is a power of 2 (e.g. 16, 64, 2048, 4096 etc).
+
+You can grab a complete template pack here: https://forum.scssoft.com/viewtopic.php?f=33&t=272386
