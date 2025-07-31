@@ -1,0 +1,10 @@
+1.10.3-Linux$ pip install darkdetect
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: darkdetect in /home/rinta/.local/lib/python3.10/site-packages (0.8.0)
+rinta@rinta-HP-LapTop:~/ドキュメント/GitHub/ets2-mod-jp/build/Paint-Job-Packer-v
+1.10.3-Linux$ ./abc
+Darkdetect is not installed (pip install darkdetect), defaulting to light mode
+Paint Job Packer can't find its library files
+Make sure that the "library" folder is in the same directory as packer.py, and it contains all of its files
+Press enter to quit
+

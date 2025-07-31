@@ -597,24 +597,20 @@ class PackerApp:
         self.wizard_step3 = ttk.Frame(self.wizard_notebook)
         self.wizard_notebook.add(self.wizard_step3, text="ステップ3：ペイントジョブ詳細")
 
-        self.ws3_color_label = ttk.Label(self.wizard_step3, text="ペイントの色を選択してください (R, G, B):")
-        self.ws3_color_label.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="w")
+        self.ws3_image_label = ttk.Label(self.wizard_step3, text="ペイントに使用する画像を選択してください:")
+        self.ws3_image_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
-        self.ws3_color_r_var = tk.StringVar(value="255")
-        self.ws3_color_g_var = tk.StringVar(value="255")
-        self.ws3_color_b_var = tk.StringVar(value="255")
+        self.ws3_image_path_var = tk.StringVar()
+        self.ws3_image_path_entry = ttk.Entry(self.wizard_step3, textvariable=self.ws3_image_path_var, state="readonly", width=40)
+        self.ws3_image_path_entry.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 
-        self.ws3_color_r_entry = ttk.Entry(self.wizard_step3, textvariable=self.ws3_color_r_var, width=5)
-        self.ws3_color_r_entry.grid(row=1, column=0, padx=5, pady=5)
-        self.ws3_color_g_entry = ttk.Entry(self.wizard_step3, textvariable=self.ws3_color_g_var, width=5)
-        self.ws3_color_g_entry.grid(row=1, column=1, padx=5, pady=5)
-        self.ws3_color_b_entry = ttk.Entry(self.wizard_step3, textvariable=self.ws3_color_b_var, width=5)
-        self.ws3_color_b_entry.grid(row=1, column=2, padx=5, pady=5)
+        self.ws3_image_button = ttk.Button(self.wizard_step3, text="画像を選択...", command=self.select_image_for_wizard)
+        self.ws3_image_button.grid(row=1, column=1, padx=5, pady=5)
 
         self.ws3_prev_button = ttk.Button(self.wizard_step3, text="戻る", command=lambda: self.wizard_notebook.select(1))
         self.ws3_prev_button.grid(row=2, column=0, padx=5, pady=10, sticky="w")
         self.ws3_generate_button = ttk.Button(self.wizard_step3, text="MODを生成", command=self.generate_mod_from_wizard)
-        self.ws3_generate_button.grid(row=2, column=2, padx=5, pady=10, sticky="e")
+        self.ws3_generate_button.grid(row=2, column=1, padx=5, pady=10, sticky="e")
 
         master.report_callback_exception = self.show_fancy_error # It's now safe to use the fancy error screen instead of the messagebox
 
@@ -1883,44 +1879,55 @@ class PackerApp:
 
         mod_name = self.ws1_mod_name_var.get()
         author_name = self.ws1_author_name_var.get()
-        vehicle_full_name = self.ws2_vehicle_var.get()
-        color_r = int(self.ws3_color_r_var.get())
-        color_g = int(self.ws3_color_g_var.get())
-        color_b = int(self.ws3_color_b_var.get())
+        image_path = self.ws3_image_path_var.get()
 
-        # This is a simplified generation process. A more robust implementation would reuse more code from make_paintjob
-        # For now, we'll just create a basic file structure and a single color DDS.
+        if not image_path:
+            messagebox.showerror("エラー", "画像が選択されていません。")
+            return
 
         output_path = f"{save_directory}/{mod_name}"
         os.makedirs(output_path, exist_ok=True)
 
-        # Create a simple DDS file with the specified color
-        from PIL import Image
-        img = Image.new('RGB', (2048, 2048), (color_r, color_g, color_b))
-        dds_path = f"{output_path}/color.dds"
         try:
-            img.save(dds_path, 'DDS')
-        except KeyError:
-            # PIL DDS support might not be installed, save as PNG as a fallback
-            png_path = f"{output_path}/color.png"
-            img.save(png_path, 'PNG')
-            messagebox.showinfo("DDSライブラリが見つかりません", f"DDSの保存に失敗しました。代わりにPNGとして保存しました: {png_path}")
+            from wand.image import Image as WandImage
+            with WandImage(filename=image_path) as img:
+                img.resize(2048, 2048)
+                img.options['dds:compression'] = 'dxt5'
+                img.options['dds:mipmaps'] = '7' # Generate mipmaps
+                dds_path = f"{output_path}/color.dds"
+                img.save(filename=dds_path)
+        except Exception as e:
+            messagebox.showerror("エラー", f"DDSファイルの生成中にエラーが発生しました: {e}")
+            return
 
-
-        # Create manifest.sii
-        manifest_content = f"SiiNunit\n{{\nmod_package: .package_name
+        manifest_content = f'''SiiNunit
 {{
-    package_version: \"1.0\"
-    display_name: \"{mod_name}\"
-    author: \"{author_name}\"
+mod_package: .package_name
+{{
+    package_version: "1.0"
+    display_name: "{mod_name}"
+    author: "{author_name}"
 
     # Categories, icon etc. would go here
 }}
-}}"
+}}'''
         with open(f"{output_path}/manifest.sii", "w") as f:
             f.write(manifest_content)
 
-        messagebox.showinfo("MOD生成完了", f"MOD '{mod_name}' が {output_path} に生成されました。")
+        instructions = f"""MOD '{mod_name}' が {output_path} に正常に生成されました。
+
+'MODのインストール方法:
+   - '{mod_name}' フォルダを、ゲームのMODフォルダに移動します:
+     - ETS2: /home/ユーザー名/.local/share/Euro Truck Simulator 2/mod/
+     - ATS: /home/ユーザー名/.local/share/American Truck Simulator/mod/
+
+ゲーム内でMODを有効化し、ペイントショップでご確認ください。"""
+        messagebox.showinfo("MOD生成完了", instructions)
+
+    def select_image_for_wizard(self):
+        file_path = filedialog.askopenfilename(title="画像を選択", filetypes=[("画像ファイル", "*.png;*.jpg;*.jpeg;*.bmp")])
+        if file_path:
+            self.ws3_image_path_var.set(file_path)
 
     def thread_new_version(self):
         multi_thread_version_check = threading.Thread(target = self.check_new_version)
